@@ -1,0 +1,11 @@
+
+
+.vscode
+*.o
+*.exe
+*.out
+build/
+/rapport/build/
+.DS_Store
+*.swp
+*~

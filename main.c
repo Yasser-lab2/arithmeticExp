@@ -1,9 +1,8 @@
 #include <stdio.h>
-#include "stack.h"
 #include <stdlib.h>
 
-Stack operand;
-Stack operator;
+#include "node.h"
+#include "stack.h"
 
 int isOperator(char c)
 {
@@ -24,29 +23,38 @@ int precedence(char op)
     return 0;
 }
 
-int calculate(int a, int b, char op)
+ void applyOperator(Stack *operands, Stack *operators)
 {
-    switch (op)
+    Node *right = pop(operands);
+    Node *left = pop(operands);
+    Node *opNode = pop(operators);
+
+    if (!right || !left || !opNode)
     {
-    case '+':
-        return a + b;
-    case '-':
-        return a - b;
-    case '*':
-        return a * b;
-    case '/':
-        return a / b;
+        fprintf(stderr, "Invalid expression\n");
+        exit(EXIT_FAILURE);
     }
-    return 0;
+
+    opNode->left = left;
+    opNode->right = right;
+    push(operands, opNode);
 }
 
-int evaluate(char *exp)
+int evaluate(const char *exp)
 {
+    Stack operand;
+    Stack operator;
     initialize(&operand);
     initialize(&operator);
 
     while (*exp != '\0')
     {
+        if (*exp == ' ')
+        {
+            exp++;
+            continue;
+        }
+
         if (isOperand(*exp))
         {
             int num = 0;
@@ -56,38 +64,42 @@ int evaluate(char *exp)
                 exp++;
             } while (isOperand(*exp));
 
-            push(&operand, num);
-            continue;
+            push(&operand, createOperandNode(num));
+            continue;// to avoid extra increment at the end
         }
         else if (isOperator(*exp))
         {
-            while (!isEmpty(&operator) && precedence(peek(&operator)) >= precedence(*exp))
+            Node *currentOp = createOperatorNode(*exp);
+            while (!isEmpty(&operator) && precedence(peek(&operator)->op) >= precedence(currentOp->op))
             {
-                int val2 = pop(&operand);
-                int val1 = pop(&operand);
-                char op = pop(&operator);
-                push(&operand, calculate(val1, val2, op));
+                applyOperator(&operand, &operator);
             }
-            push(&operator, *exp);
+            push(&operator, currentOp);
         }
         exp++;
     }
 
     while (!isEmpty(&operator))
     {
-        int val2 = pop(&operand);
-        int val1 = pop(&operand);
-        char op = pop(&operator);
-        push(&operand, calculate(val1, val2, op));
+        applyOperator(&operand, &operator);
     }
 
-    return pop(&operand);
+    Node *root = pop(&operand);
+    if (!root)
+    {
+        fprintf(stderr, "Invalid expression\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int result = evaluateTree(root);
+    freeTree(root);
+    return result;
 }
 
 int main()
 {
     printf("Hello, World! from bekhhh \n");
-    int result = evaluate("13+5*2-8/4");
+    int result = evaluate("3 + 5 * 2 - 8 / 4");
     printf("Result: %d\n", result);
     return 0;
 }

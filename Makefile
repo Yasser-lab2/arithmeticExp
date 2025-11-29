@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -O2
-SRC=main.c
+SRC=main.c stack.c node.c
 TARGET=build/main
 PDF_DIR=rapport
 TEX_SRC=$(PDF_DIR)/main.tex

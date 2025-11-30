@@ -1,33 +1,997 @@
-\documentclass{article}
+\documentclass[12pt,a4paper]{article}
+
+% ============================================================================
+% Packages
+% ============================================================================
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{a4paper, left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
 \usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usepackage{forest}
+\usepackage{pdfpages}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
 
-\title{My Project Report}
-\author{Your Name}
-\date{\today}
+% ============================================================================
+% Configuration TikZ pour les arbres
+% ============================================================================
+\usetikzlibrary{trees,positioning,arrows.meta,shapes.geometric}
 
+% ============================================================================
+% Configuration des listings pour le code C
+% ============================================================================
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{cstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    language=C
+}
+
+\lstset{style=cstyle}
+
+% ============================================================================
+% Configuration en-tête et pied de page
+% ============================================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textit{Évaluation d'expressions arithmétiques}}
+\fancyhead[R]{\textit{Structures de données}}
+\fancyfoot[C]{\thepage}
+
+% ============================================================================
+% Hyperref Configuration
+% ============================================================================
+
+
+% ============================================================================
+% Début du document
+% ============================================================================
 \begin{document}
 
-\input{assets/cover.tex}
+% ============================================================================
+% Page de garde (utilisation du PDF existant)
+% ============================================================================
+\includepdf[pages=1]{assets/page de gardeSDD[1].pdf}
 
-\newpage
+% ============================================================================
+% Table des matières
+% ============================================================================
 \tableofcontents
 \newpage
 
+% ============================================================================
+% Introduction
+% ============================================================================
 \section{Introduction}
-This is the introduction.
 
-\section{Main Content}
-Here is the main content of the report.
+L'évaluation d'expressions arithmétiques constitue un problème fondamental en informatique, particulièrement pertinent dans la conception de compilateurs, d'interpréteurs et de calculatrices scientifiques. La notation infixe, bien que naturelle pour l'être humain, présente des défis computationnels significatifs en raison de la nécessité de gérer la précédence des opérateurs et l'associativité.
 
-\subsection{Subsection}
-Here is a subsectionnnn.
+\subsection{Contexte et problématique}
 
+Dans la notation infixe standard (par exemple, \texttt{3 + 5 * 2}), les opérateurs sont placés entre leurs opérandes. Cette représentation requiert la prise en compte de règles complexes :
+\begin{itemize}
+    \item \textbf{Précédence des opérateurs} : la multiplication et la division doivent être évaluées avant l'addition et la soustraction.
+    \item \textbf{Associativité} : pour des opérateurs de même précédence, l'ordre d'évaluation (gauche à droite ou droite à gauche) doit être respecté.
+    \item \textbf{Parenthésage} : les parenthèses modifient l'ordre naturel d'évaluation.
+\end{itemize}
+
+\subsection{Objectifs du projet}
+
+Ce projet vise à implémenter un système complet d'évaluation d'expressions arithmétiques en langage C, basé sur l'utilisation d'arbres binaires d'expression. Les objectifs spécifiques sont les suivants :
+
+\begin{enumerate}
+    \item Concevoir et implémenter une structure de données d'arbre binaire adaptée à la représentation d'expressions arithmétiques.
+    \item Développer un algorithme de parsing utilisant deux piles pour construire l'arbre d'expression à partir d'une notation infixe.
+    \item Implémenter un mécanisme d'évaluation récursive de l'arbre d'expression.
+    \item Gérer correctement la précédence des opérateurs sans recours aux parenthèses.
+    \item Assurer une gestion mémoire rigoureuse avec allocation et libération appropriées.
+\end{enumerate}
+
+\subsection{Organisation du rapport}
+
+Ce rapport s'articule autour de trois axes principaux. Le premier présente les fondements théoriques nécessaires à la compréhension des structures de données et algorithmes utilisés. Le deuxième détaille l'implémentation concrète avec une description approfondie de l'algorithme à deux piles et du processus de construction de l'arbre. Le troisième illustre le fonctionnement du système à travers un exemple complet d'exécution, suivi d'une analyse de la complexité algorithmique.
+
+% ============================================================================
+% Fondements théoriques
+% ============================================================================
+\section{Fondements théoriques}
+
+\subsection{Les arbres binaires d'expression}
+
+Un arbre binaire d'expression est une structure de données arborescente où :
+\begin{itemize}
+    \item Les \textbf{nœuds internes} représentent des opérateurs arithmétiques (\texttt{+}, \texttt{-}, \texttt{*}, \texttt{/}).
+    \item Les \textbf{feuilles} contiennent les opérandes (valeurs numériques).
+    \item Chaque nœud opérateur possède exactement deux fils : un sous-arbre gauche et un sous-arbre droit.
+\end{itemize}
+
+\subsubsection{Propriétés fondamentales}
+
+L'arbre d'expression encode implicitement l'ordre d'évaluation : pour évaluer un nœud opérateur, il faut d'abord évaluer récursivement ses deux sous-arbres, puis appliquer l'opération. Cette propriété garantit le respect automatique de la précédence des opérateurs.
+
+\subsubsection{Exemple d'arbre d'expression}
+
+Considérons l'expression \texttt{3 + 5 * 2}. L'arbre d'expression correspondant est :
+
+\begin{center}
+\begin{tikzpicture}[
+    level distance=1.5cm,
+    level 1/.style={sibling distance=3cm},
+    level 2/.style={sibling distance=1.5cm},
+    every node/.style={circle, draw, minimum size=0.8cm}
+]
+\node {$+$}
+    child {node {$3$}}
+    child {node {$*$}
+        child {node {$5$}}
+        child {node {$2$}}
+    };
+\end{tikzpicture}
+\end{center}
+
+L'évaluation se fait de bas en haut :
+\begin{enumerate}
+    \item Évaluation du sous-arbre droit : $5 * 2 = 10$
+    \item Évaluation de la racine : $3 + 10 = 13$
+\end{enumerate}
+
+\subsection{Structure de pile (Stack)}
+
+La pile est une structure de données linéaire suivant le principe LIFO (\textit{Last In, First Out}) : le dernier élément ajouté est le premier à être retiré. Les opérations fondamentales sont :
+\begin{itemize}
+    \item \texttt{push(element)} : ajoute un élément au sommet de la pile.
+    \item \texttt{pop()} : retire et retourne l'élément au sommet de la pile.
+    \item \texttt{peek()} : consulte l'élément au sommet sans le retirer.
+    \item \texttt{isEmpty()} : teste si la pile est vide.
+\end{itemize}
+
+\subsection{Précédence des opérateurs}
+
+Dans notre implémentation, nous définissons deux niveaux de précédence :
+
+\begin{center}
+\begin{tabular}{|c|c|l|}
+\hline
+\textbf{Opérateur} & \textbf{Précédence} & \textbf{Signification} \\
+\hline
+\texttt{+}, \texttt{-} & 1 & Priorité basse (addition, soustraction) \\
+\hline
+\texttt{*}, \texttt{/} & 2 & Priorité haute (multiplication, division) \\
+\hline
+\end{tabular}
+\end{center}
+
+Cette hiérarchie garantit que les multiplications et divisions sont effectuées avant les additions et soustractions, conformément aux règles arithmétiques standards.
+
+% ============================================================================
+% Architecture et structures de données
+% ============================================================================
+\section{Architecture et structures de données}
+
+\subsection{Structure du nœud (\texttt{Node})}
+
+La structure \texttt{Node} est le composant fondamental de notre arbre d'expression. Elle est définie comme suit :
+
+\begin{lstlisting}[caption={Structure Node dans node.h}]
+typedef struct Node {
+    bool isOperator;      // Indicateur : operateur ou operande
+    char op;              // Caractere de l'operateur (+, -, *, /)
+    int value;            // Valeur numerique (pour les operandes)
+    struct Node *left;    // Pointeur vers le fils gauche
+    struct Node *right;   // Pointeur vers le fils droit
+} Node;
+\end{lstlisting}
+
+\subsubsection{Champs de la structure}
+
+\begin{itemize}
+    \item \textbf{\texttt{isOperator}} : Booléen permettant de distinguer les nœuds opérateurs des nœuds opérandes. Cette distinction est cruciale lors de l'évaluation de l'arbre.
+    \item \textbf{\texttt{op}} : Caractère stockant l'opérateur arithmétique (\texttt{+}, \texttt{-}, \texttt{*}, \texttt{/}). Ce champ est pertinent uniquement si \texttt{isOperator} vaut \texttt{true}.
+    \item \textbf{\texttt{value}} : Entier contenant la valeur numérique pour les nœuds opérandes. Non utilisé pour les nœuds opérateurs.
+    \item \textbf{\texttt{left}} et \textbf{\texttt{right}} : Pointeurs vers les sous-arbres gauche et droit. Pour les nœuds feuilles (opérandes), ces pointeurs valent \texttt{NULL}.
+\end{itemize}
+
+\subsubsection{Fonctions de manipulation}
+
+Quatre fonctions principales permettent de manipuler les nœuds :
+
+\begin{lstlisting}[caption={Création d'un nœud opérande}]
+Node *createOperandNode(int value) {
+    Node *n = (Node *)malloc(sizeof(Node));
+    if (!n) {
+        perror("Failed to allocate operand node");
+        exit(EXIT_FAILURE);
+    }
+    n->isOperator = false;
+    n->op = '\0';
+    n->value = value;
+    n->left = NULL;
+    n->right = NULL;
+    return n;
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Création d'un nœud opérateur}]
+Node *createOperatorNode(char op) {
+    Node *n = (Node *)malloc(sizeof(Node));
+    if (!n) {
+        perror("Failed to allocate operator node");
+        exit(EXIT_FAILURE);
+    }
+    n->isOperator = true;
+    n->op = op;
+    n->value = 0;
+    n->left = NULL;
+    n->right = NULL;
+    return n;
+}
+\end{lstlisting}
+
+Ces fonctions garantissent une initialisation correcte de tous les champs et une gestion d'erreur appropriée en cas d'échec d'allocation mémoire.
+
+\subsection{Structure de pile (\texttt{Stack})}
+
+La pile est implémentée sous forme d'un tableau statique avec un indice de sommet :
+
+\begin{lstlisting}[caption={Structure Stack dans stack.h}]
+#define MAX_SIZE 100
+
+typedef struct {
+    Node *items[MAX_SIZE];  // Tableau de pointeurs vers des noeuds
+    int top;                // Indice du sommet de la pile (-1 si vide)
+} Stack;
+\end{lstlisting}
+
+\subsubsection{Opérations sur la pile}
+
+Les opérations classiques sont implémentées de manière efficace :
+
+\begin{lstlisting}[caption={Opérations push et pop}]
+void push(Stack *s, Node *value) {
+    if (isFull(s)) {
+        printf("Stack overflow\n");
+        return;
+    }
+    s->items[++(s->top)] = value;
+}
+
+Node *pop(Stack *s) {
+    if (isEmpty(s)) {
+        printf("Stack underflow\n");
+        return NULL;
+    }
+    return s->items[(s->top)--];
+}
+\end{lstlisting}
+
+L'utilisation d'un tableau statique limite la taille maximale des expressions à 100 éléments, mais garantit des opérations en temps constant O(1).
+
+% ============================================================================
+% Algorithme de construction de l'arbre d'expression
+% ============================================================================
+\section{Algorithme de construction de l'arbre d'expression}
+
+\subsection{Principe général : l'algorithme à deux piles}
+
+L'algorithme utilisé est une variante de l'algorithme Shunting-yard de Dijkstra, adapté pour construire directement un arbre d'expression plutôt que de convertir en notation postfixe. Il utilise deux piles distinctes :
+
+\begin{enumerate}
+    \item \textbf{Pile d'opérandes} (\texttt{operand}) : contient des pointeurs vers des nœuds. Ces nœuds peuvent être soit des feuilles (valeurs numériques), soit des sous-arbres déjà construits.
+    \item \textbf{Pile d'opérateurs} (\texttt{operator}) : contient des pointeurs vers des nœuds opérateurs en attente d'être assemblés avec leurs opérandes.
+\end{enumerate}
+
+\subsection{Étapes de l'algorithme}
+
+L'algorithme parcourt l'expression caractère par caractère et applique les règles suivantes :
+
+\subsubsection{Traitement d'un opérande}
+
+Lorsqu'un chiffre est rencontré :
+\begin{enumerate}
+    \item Parser le nombre complet (gérer les nombres multi-chiffres).
+    \item Créer un nœud opérande avec \texttt{createOperandNode(nombre)}.
+    \item Empiler ce nœud sur la pile d'opérandes.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Traitement des opérandes dans la fonction evaluate}]
+if (isOperand(*exp)) {
+    int num = 0;
+    do {
+        num = num * 10 + (*exp - '0');
+        exp++;
+    } while (isOperand(*exp));
+
+    push(&operand, createOperandNode(num));
+    continue;
+}
+\end{lstlisting}
+
+\subsubsection{Traitement d'un opérateur}
+
+Lorsqu'un opérateur est rencontré :
+\begin{enumerate}
+    \item Créer un nœud opérateur.
+    \item Tant que la pile d'opérateurs n'est pas vide et que l'opérateur au sommet a une précédence supérieure ou égale :
+    \begin{itemize}
+        \item Appeler \texttt{applyOperator()} pour construire un sous-arbre.
+    \end{itemize}
+    \item Empiler le nouvel opérateur sur la pile d'opérateurs.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Traitement des opérateurs}]
+else if (isOperator(*exp)) {
+    Node *currentOp = createOperatorNode(*exp);
+    while (!isEmpty(&operator) &&
+           precedence(peek(&operator)->op) >= precedence(currentOp->op)) {
+        applyOperator(&operand, &operator);
+    }
+    push(&operator, currentOp);
+}
+\end{lstlisting}
+
+\subsection{Fonction \texttt{applyOperator}}
+
+Cette fonction est le cœur de la construction de l'arbre. Elle assemble trois nœuds (un opérateur et deux opérandes) en un sous-arbre :
+
+\begin{lstlisting}[caption={Construction d'un sous-arbre}]
+void applyOperator(Stack *operands, Stack *operators) {
+    Node *right = pop(operands);  // Second operande (droite)
+    Node *left = pop(operands);   // Premier operande (gauche)
+    Node *opNode = pop(operators); // Operateur
+
+    if (!right || !left || !opNode) {
+        fprintf(stderr, "Invalid expression\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Liaison de l'operateur avec ses operandes
+    opNode->left = left;
+    opNode->right = right;
+
+    // Le sous-arbre devient un nouvel operande
+    push(operands, opNode);
+}
+\end{lstlisting}
+
+\textbf{Point crucial} : après la liaison, le sous-arbre complet est réempilé sur la pile d'opérandes. Cela permet de construire progressivement des arbres de plus en plus complexes.
+
+\subsection{Finalisation}
+
+Une fois l'expression entièrement parcourue, il reste potentiellement des opérateurs en attente :
+
+\begin{lstlisting}[caption={Traitement des opérateurs restants}]
+while (!isEmpty(&operator)) {
+    applyOperator(&operand, &operator);
+}
+
+Node *root = pop(&operand);
+\end{lstlisting}
+
+À la fin, la pile d'opérandes contient un unique élément : la racine de l'arbre d'expression complet.
+
+% ============================================================================
+% Exemple d'exécution détaillé
+% ============================================================================
+\section{Exemple d'exécution détaillé}
+
+Considérons l'expression \texttt{3 + 5 * 2 - 8 / 4} utilisée dans le programme principal. Nous allons détailler l'état des piles à chaque étape.
+
+\subsection{État initial}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+(vide) & (vide) \\
+\hline
+\end{tabular}
+\end{center}
+
+Expression restante : \texttt{3 + 5 * 2 - 8 / 4}
+
+\subsection{Étape 1 : Lecture de \texttt{3}}
+
+Opérande détecté $\Rightarrow$ Créer \texttt{Node(3)} et empiler.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(3)} & (vide) \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}[every node/.style={circle, draw, minimum size=0.8cm}]
+\node {$3$};
+\end{tikzpicture}
+\end{center}
+
+\subsection{Étape 2 : Lecture de \texttt{+}}
+
+Opérateur détecté. Précédence(\texttt{+}) = 1. Pile opérateurs vide $\Rightarrow$ Empiler directement.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(3)} & \texttt{Node(+)} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 3 : Lecture de \texttt{5}}
+
+Opérande détecté $\Rightarrow$ Créer \texttt{Node(5)} et empiler.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(5)} & \texttt{Node(+)} \\
+\texttt{Node(3)} & \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 4 : Lecture de \texttt{*}}
+
+Opérateur détecté. Précédence(\texttt{*}) = 2, Précédence(\texttt{+}) = 1.
+
+Comme $2 > 1$, pas de construction de sous-arbre. Empiler \texttt{*}.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(5)} & \texttt{Node(*)} \\
+\texttt{Node(3)} & \texttt{Node(+)} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 5 : Lecture de \texttt{2}}
+
+Opérande détecté $\Rightarrow$ Créer \texttt{Node(2)} et empiler.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(2)} & \texttt{Node(*)} \\
+\texttt{Node(5)} & \texttt{Node(+)} \\
+\texttt{Node(3)} & \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 6 : Lecture de \texttt{-}}
+
+Opérateur détecté. Précédence(\texttt{-}) = 1, Précédence(\texttt{*}) = 2.
+
+Comme $1 < 2$, appeler \texttt{applyOperator()} :
+\begin{itemize}
+    \item Dépiler \texttt{Node(2)}, \texttt{Node(5)}, \texttt{Node(*)}
+    \item Construire sous-arbre : \texttt{*(5, 2)}
+    \item Empiler le sous-arbre
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}[
+    level distance=1.2cm,
+    level 1/.style={sibling distance=1.5cm},
+    every node/.style={circle, draw, minimum size=0.8cm}
+]
+\node {$*$}
+    child {node {$5$}}
+    child {node {$2$}};
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Tree(5*2)} & \texttt{Node(+)} \\
+\texttt{Node(3)} & \\
+\hline
+\end{tabular}
+\end{center}
+
+Précédence(\texttt{-}) = Précédence(\texttt{+}) = 1. Appeler à nouveau \texttt{applyOperator()} :
+\begin{itemize}
+    \item Dépiler \texttt{Tree(5*2)}, \texttt{Node(3)}, \texttt{Node(+)}
+    \item Construire sous-arbre : \texttt{+(3, 5*2)}
+    \item Empiler le sous-arbre
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}[
+    level distance=1.2cm,
+    level 1/.style={sibling distance=2cm},
+    level 2/.style={sibling distance=1cm},
+    every node/.style={circle, draw, minimum size=0.8cm}
+]
+\node {$+$}
+    child {node {$3$}}
+    child {node {$*$}
+        child {node {$5$}}
+        child {node {$2$}}
+    };
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Tree(3+5*2)} & (vide) \\
+\hline
+\end{tabular}
+\end{center}
+
+Maintenant empiler \texttt{-} :
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Tree(3+5*2)} & \texttt{Node(-)} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 7 : Lecture de \texttt{8}}
+
+Opérande détecté $\Rightarrow$ Créer \texttt{Node(8)} et empiler.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(8)} & \texttt{Node(-)} \\
+\texttt{Tree(3+5*2)} & \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 8 : Lecture de \texttt{/}}
+
+Opérateur détecté. Précédence(\texttt{/}) = 2, Précédence(\texttt{-}) = 1.
+
+Comme $2 > 1$, empiler directement \texttt{/}.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(8)} & \texttt{Node(/)} \\
+\texttt{Tree(3+5*2)} & \texttt{Node(-)} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 9 : Lecture de \texttt{4}}
+
+Opérande détecté $\Rightarrow$ Créer \texttt{Node(4)} et empiler.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Node(4)} & \texttt{Node(/)} \\
+\texttt{Node(8)} & \texttt{Node(-)} \\
+\texttt{Tree(3+5*2)} & \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Étape 10 : Fin de l'expression}
+
+Traiter les opérateurs restants dans la pile :
+
+\textbf{Premier \texttt{applyOperator()} :}
+\begin{itemize}
+    \item Dépiler \texttt{Node(4)}, \texttt{Node(8)}, \texttt{Node(/)}
+    \item Construire \texttt{/(8, 4)}
+    \item Empiler
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}[
+    level distance=1.2cm,
+    level 1/.style={sibling distance=1.5cm},
+    every node/.style={circle, draw, minimum size=0.8cm}
+]
+\node {$/$}
+    child {node {$8$}}
+    child {node {$4$}};
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Pile opérandes} & \textbf{Pile opérateurs} \\
+\hline
+\texttt{Tree(8/4)} & \texttt{Node(-)} \\
+\texttt{Tree(3+5*2)} & \\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Deuxième \texttt{applyOperator()} :}
+\begin{itemize}
+    \item Dépiler \texttt{Tree(8/4)}, \texttt{Tree(3+5*2)}, \texttt{Node(-)}
+    \item Construire \texttt{-((3+5*2), (8/4))}
+    \item Empiler
+\end{itemize}
+
+\subsection{Arbre d'expression final}
+
+\begin{center}
+\begin{tikzpicture}[
+    level distance=1.5cm,
+    level 1/.style={sibling distance=4cm},
+    level 2/.style={sibling distance=2cm},
+    level 3/.style={sibling distance=1cm},
+    every node/.style={circle, draw, minimum size=0.8cm}
+]
+\node {$-$}
+    child {node {$+$}
+        child {node {$3$}}
+        child {node {$*$}
+            child {node {$5$}}
+            child {node {$2$}}
+        }
+    }
+    child {node {$/$}
+        child {node {$8$}}
+        child {node {$4$}}
+    };
+\end{tikzpicture}
+\end{center}
+
+\subsection{Évaluation de l'arbre}
+
+L'évaluation se fait par parcours post-ordre récursif :
+
+\begin{enumerate}
+    \item Évaluer le sous-arbre gauche de \texttt{-} :
+    \begin{itemize}
+        \item Évaluer \texttt{Node(3)} $\Rightarrow$ 3
+        \item Évaluer sous-arbre \texttt{*} :
+        \begin{itemize}
+            \item Évaluer \texttt{Node(5)} $\Rightarrow$ 5
+            \item Évaluer \texttt{Node(2)} $\Rightarrow$ 2
+            \item Calculer $5 * 2 = 10$
+        \end{itemize}
+        \item Calculer $3 + 10 = 13$
+    \end{itemize}
+    \item Évaluer le sous-arbre droit de \texttt{-} :
+    \begin{itemize}
+        \item Évaluer \texttt{Node(8)} $\Rightarrow$ 8
+        \item Évaluer \texttt{Node(4)} $\Rightarrow$ 4
+        \item Calculer $8 / 4 = 2$
+    \end{itemize}
+    \item Calculer la racine : $13 - 2 = 11$
+\end{enumerate}
+
+\textbf{Résultat final :} \boxed{11}
+
+\begin{lstlisting}[caption={Fonction d'évaluation récursive}]
+int evaluateTree(const Node *root) {
+    if (!root) {
+        fprintf(stderr, "Cannot evaluate an empty tree\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Cas de base : noeud operande (feuille)
+    if (!root->isOperator) {
+        return root->value;
+    }
+
+    // Cas recursif : noeud operateur
+    int leftValue = evaluateTree(root->left);
+    int rightValue = evaluateTree(root->right);
+    return evaluateOperator(leftValue, rightValue, root->op);
+}
+\end{lstlisting}
+
+% ============================================================================
+% Analyse de complexité
+% ============================================================================
+\section{Analyse de complexité}
+
+\subsection{Complexité temporelle}
+
+\subsubsection{Phase de construction de l'arbre}
+
+Soit $n$ la longueur de l'expression d'entrée.
+
+\begin{itemize}
+    \item \textbf{Parcours de l'expression} : Chaque caractère est lu exactement une fois $\Rightarrow$ O(n).
+    \item \textbf{Opérations sur les piles} : Chaque nœud est empilé et dépilé au plus une fois sur chaque pile $\Rightarrow$ O(1) par opération.
+    \item \textbf{Nombre de nœuds créés} : Pour une expression avec $k$ opérandes et $k-1$ opérateurs, on crée $2k-1$ nœuds $\Rightarrow$ O(n).
+\end{itemize}
+
+\textbf{Complexité de construction :} $O(n)$
+
+\subsubsection{Phase d'évaluation}
+
+L'évaluation effectue un parcours post-ordre de l'arbre :
+\begin{itemize}
+    \item Chaque nœud est visité exactement une fois.
+    \item Pour un arbre de $m$ nœuds, la complexité est O(m).
+    \item Comme $m \approx 2k - 1$ où $k$ est le nombre d'opérandes, et $k \leq n$, on a $m = O(n)$.
+\end{itemize}
+
+\textbf{Complexité d'évaluation :} $O(n)$
+
+\subsubsection{Complexité globale}
+
+$$\boxed{T(n) = O(n) + O(n) = O(n)}$$
+
+L'algorithme est linéaire par rapport à la taille de l'expression.
+
+\subsection{Complexité spatiale}
+
+\subsubsection{Espace pour les piles}
+
+Dans le pire cas, toutes les opérations sont de même précédence et associatives à gauche. La profondeur maximale des piles est proportionnelle au nombre d'opérateurs $\Rightarrow$ O(n).
+
+\subsubsection{Espace pour l'arbre}
+
+L'arbre contient $2k - 1$ nœuds où $k$ est le nombre d'opérandes $\Rightarrow$ O(n).
+
+\subsubsection{Espace pour la pile d'appel récursive}
+
+Lors de l'évaluation, la profondeur de récursion est égale à la hauteur de l'arbre. Dans le pire cas (arbre complètement déséquilibré), cette hauteur peut être O(n).
+
+\textbf{Complexité spatiale totale :} $\boxed{S(n) = O(n)}$
+
+\subsection{Optimisations possibles}
+
+\begin{enumerate}
+    \item \textbf{Évaluation lors de la construction} : Au lieu de construire l'arbre complet puis l'évaluer, on pourrait évaluer directement lors de la construction, économisant l'espace mémoire de l'arbre.
+    \item \textbf{Piles dynamiques} : Utiliser des listes chaînées au lieu de tableaux statiques pour éviter la limitation de taille.
+    \item \textbf{Support des parenthèses} : Ajouter un traitement des parenthèses pour gérer des expressions plus complexes.
+    \item \textbf{Gestion des nombres flottants} : Modifier la structure \texttt{Node} pour supporter des valeurs \texttt{double} au lieu de \texttt{int}.
+\end{enumerate}
+
+% ============================================================================
+% Implémentation des fonctions clés
+% ============================================================================
+\section{Implémentation des fonctions clés}
+
+\subsection{Fonction \texttt{evaluate} : cœur du système}
+
+La fonction \texttt{evaluate} constitue le point d'entrée principal du système d'évaluation.
+
+\begin{lstlisting}[caption={Fonction evaluate complète}]
+int evaluate(const char *exp) {
+    Stack operand;
+    Stack operator;
+    initialize(&operand);
+    initialize(&operator);
+
+    while (*exp != '\0') {
+        if (*exp == ' ') {
+            exp++;
+            continue;
+        }
+
+        if (isOperand(*exp)) {
+            int num = 0;
+            do {
+                num = num * 10 + (*exp - '0');
+                exp++;
+            } while (isOperand(*exp));
+
+            push(&operand, createOperandNode(num));
+            continue;
+        }
+        else if (isOperator(*exp)) {
+            Node *currentOp = createOperatorNode(*exp);
+            while (!isEmpty(&operator) &&
+                   precedence(peek(&operator)->op) >=
+                   precedence(currentOp->op)) {
+                applyOperator(&operand, &operator);
+            }
+            push(&operator, currentOp);
+        }
+        exp++;
+    }
+
+    while (!isEmpty(&operator)) {
+        applyOperator(&operand, &operator);
+    }
+
+    Node *root = pop(&operand);
+    if (!root) {
+        fprintf(stderr, "Invalid expression\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int result = evaluateTree(root);
+    freeTree(root);
+    return result;
+}
+\end{lstlisting}
+
+\subsection{Fonction \texttt{evaluateOperator}}
+
+Cette fonction auxiliaire applique un opérateur à deux valeurs numériques.
+
+\begin{lstlisting}[caption={Application d'un opérateur arithmétique}]
+int evaluateOperator(int left, int right, char op) {
+    switch (op) {
+    case '+':
+        return left + right;
+    case '-':
+        return left - right;
+    case '*':
+        return left * right;
+    case '/':
+        if (right == 0) {
+            fprintf(stderr, "Error: Division by zero\n");
+            exit(EXIT_FAILURE);
+        }
+        return left / right;
+    default:
+        fprintf(stderr, "Unknown operator: %c\n", op);
+        exit(EXIT_FAILURE);
+    }
+}
+\end{lstlisting}
+
+\subsection{Fonction \texttt{freeTree} : gestion mémoire}
+
+La libération de la mémoire se fait par un parcours post-ordre pour éviter d'accéder à de la mémoire déjà libérée.
+
+\begin{lstlisting}[caption={Libération récursive de l'arbre}]
+void freeTree(Node *root) {
+    if (!root) {
+        return;
+    }
+    freeTree(root->left);
+    freeTree(root->right);
+    free(root);
+}
+\end{lstlisting}
+
+% ============================================================================
+% Tests et validation
+% ============================================================================
+\section{Tests et validation}
+
+\subsection{Exemple d'exécution}
+
+Le programme principal teste l'expression \texttt{3 + 5 * 2 - 8 / 4} :
+
+\begin{lstlisting}[caption={Fonction main}]
+int main() {
+    int result = evaluate("3 + 5 * 2 - 8 / 4");
+    printf("Result: %d\n", result);
+    return 0;
+}
+\end{lstlisting}
+
+\textbf{Sortie attendue :}
+\begin{verbatim}
+
+Result: 11
+\end{verbatim}
+
+\subsection{Cas de test supplémentaires}
+
+Pour valider l'implémentation, on peut tester les cas suivants :
+
+\begin{center}
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Expression} & \textbf{Résultat attendu} & \textbf{Vérification} \\
+\hline
+\texttt{5 + 3} & 8 & Addition simple \\
+\hline
+\texttt{10 - 4} & 6 & Soustraction simple \\
+\hline
+\texttt{7 * 3} & 21 & Multiplication simple \\
+\hline
+\texttt{20 / 4} & 5 & Division simple \\
+\hline
+\texttt{2 + 3 * 4} & 14 & Précédence correcte \\
+\hline
+\texttt{10 - 2 - 3} & 5 & Associativité gauche \\
+\hline
+\texttt{100 / 5 / 2} & 10 & Associativité division \\
+\hline
+\texttt{3 + 5 * 2 - 8 / 4} & 11 & Expression complexe \\
+\hline
+\end{tabular}
+\end{center}
+
+
+% ============================================================================
+% Conclusion
+% ============================================================================
 \section{Conclusion}
-This is the conclusion.
 
+\subsection{Synthèse des réalisations}
+
+Ce projet a permis l'implémentation complète d'un système d'évaluation d'expressions arithmétiques basé sur les arbres binaires d'expression. Les objectifs fixés ont été atteints :
+
+\begin{itemize}
+    \item Conception d'une structure de données \texttt{Node} flexible permettant de représenter à la fois opérateurs et opérandes.
+    \item Implémentation d'une structure de pile efficace avec complexité O(1) pour les opérations fondamentales.
+    \item Développement d'un algorithme à deux piles inspiré de Shunting-yard, adapté pour construire directement un arbre d'expression.
+    \item Gestion correcte de la précédence des opérateurs arithmétiques sans recours aux parenthèses.
+    \item Implémentation d'une fonction d'évaluation récursive élégante et efficace.
+\end{itemize}
+
+% ============================================================================
+% Annexes : Code source complet
+% ============================================================================
 \newpage
+\appendix
 
+\section{Code source complet}
+
+\subsection{Fichier \texttt{node.h}}
+\lstinputlisting[caption={node.h}]{../node.h}
+
+\subsection{Fichier \texttt{node.c}}
+\lstinputlisting[caption={node.c}]{../node.c}
+
+\subsection{Fichier \texttt{stack.h}}
+\lstinputlisting[caption={stack.h}]{../stack.h}
+
+\subsection{Fichier \texttt{stack.c}}
+\lstinputlisting[caption={stack.c}]{../stack.c}
+
+\subsection{Fichier \texttt{main.c}}
+\lstinputlisting[caption={main.c}]{../main.c}
 
 \end{document}
